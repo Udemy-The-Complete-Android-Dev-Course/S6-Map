@@ -2,19 +2,29 @@ package ldansorean.s6map;
 
 import androidx.fragment.app.FragmentActivity;
 
+import android.annotation.SuppressLint;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
+    private String locationProvider;
+    private LocationManager locationManager;
+    private Location initialLocation;
 
+    @SuppressLint("MissingPermission")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -23,6 +33,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        //get last known user location
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        locationProvider = locationManager.getBestProvider(new Criteria(), false);
+
+        initialLocation = locationManager.getLastKnownLocation(locationProvider);
     }
 
 
@@ -39,9 +55,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        LatLng position;
+        if (initialLocation == null) {
+            position = new LatLng(0, 0);
+        } else {
+            position = new LatLng(initialLocation.getLatitude(), initialLocation.getLongitude());
+        }
+        BitmapDescriptor icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
+        mMap.addMarker(new MarkerOptions().position(position).icon(icon).title("You are here"));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, 16));
     }
 }
