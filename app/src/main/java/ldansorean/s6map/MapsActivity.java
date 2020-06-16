@@ -3,7 +3,9 @@ package ldansorean.s6map;
 import androidx.fragment.app.FragmentActivity;
 
 import android.annotation.SuppressLint;
+import android.location.Address;
 import android.location.Criteria;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -19,6 +21,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
     private static final int LOCATION_UPDATE_MIN_TIME = 1000;
@@ -29,6 +35,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private String locationProvider;
     private LocationManager locationManager;
     private Location initialLocation;
+    private Geocoder geocoder;
 
     @SuppressLint("MissingPermission")
     @Override
@@ -46,6 +53,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         initialLocation = locationManager.getLastKnownLocation(locationProvider);
 
         markerIcon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
+        geocoder = new Geocoder(getApplicationContext(), Locale.ENGLISH);
     }
 
 
@@ -82,11 +90,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.i("myapp", "New latitude = " + location.getLatitude() + " longitude = " + location.getLongitude());
-        LatLng position = new LatLng(location.getLatitude(), location.getLongitude());
+        //get new position coordinates
+        double lat = location.getLatitude();
+        double lng = location.getLongitude();
+        Log.i("myapp", "New latitude = " + lat + " longitude = " + lng);
+        LatLng position = new LatLng(lat, lng);
+
+        //the marker text will show the address or a default text if the address is not available
+        String markerText = "You are here";
+        try {
+            List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
+            if (addresses != null && !addresses.isEmpty())
+                markerText = addresses.get(0).getAddressLine(0);
+        } catch (IOException e) {
+            ; //just use the default text
+        }
 
         mMap.clear();
-        mMap.addMarker(new MarkerOptions().position(position).icon(markerIcon).title("You are here"));
+        mMap.addMarker(new MarkerOptions().position(position).icon(markerIcon).title(markerText));
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, 16));
     }
 
