@@ -5,8 +5,10 @@ import androidx.fragment.app.FragmentActivity;
 import android.annotation.SuppressLint;
 import android.location.Criteria;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -17,9 +19,13 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
+
+    private static final int LOCATION_UPDATE_MIN_TIME = 1000;
+    private static final int LOCATION_UPDATE_MIN_DISTANCE = 1;
 
     private GoogleMap mMap;
+    private BitmapDescriptor markerIcon;
     private String locationProvider;
     private LocationManager locationManager;
     private Location initialLocation;
@@ -36,9 +42,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //get last known user location
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        locationProvider = locationManager.getBestProvider(new Criteria(), false);
-
+        locationProvider = locationManager.getBestProvider(new Criteria(), true);
         initialLocation = locationManager.getLastKnownLocation(locationProvider);
+
+        markerIcon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
     }
 
 
@@ -55,14 +62,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        LatLng position;
-        if (initialLocation == null) {
-            position = new LatLng(0, 0);
-        } else {
-            position = new LatLng(initialLocation.getLatitude(), initialLocation.getLongitude());
+        if (initialLocation != null) {
+            onLocationChanged(initialLocation);
         }
-        BitmapDescriptor icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
-        mMap.addMarker(new MarkerOptions().position(position).icon(icon).title("You are here"));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        locationManager.removeUpdates(this);
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    protected void onResume() {
+        super.onResume();
+        locationManager.requestLocationUpdates(locationProvider, LOCATION_UPDATE_MIN_TIME, LOCATION_UPDATE_MIN_DISTANCE, this);
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.i("myapp", "New latitude = " + location.getLatitude() + " longitude = " + location.getLongitude());
+        LatLng position = new LatLng(location.getLatitude(), location.getLongitude());
+
+        mMap.clear();
+        mMap.addMarker(new MarkerOptions().position(position).icon(markerIcon).title("You are here"));
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, 16));
     }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
 }
